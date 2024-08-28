@@ -1,0 +1,24 @@
+---
+- name: write template to /etc/fail2ban/jail.local
+  ansible.builtin.template:
+    src: templates/jail.local.j2
+    dest: /etc/fail2ban/jail.local
+  tags: fail2ban
+
+- name: restart fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: restarted
+  tags: fail2ban
+
+- name: enable fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: yes
+  tags: fail2ban
+
+- name: check fail2ban status
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: started
+  tags: fail2ban

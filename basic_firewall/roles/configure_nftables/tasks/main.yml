@@ -1,0 +1,45 @@
+---
+- name: Write template to /etc/nftables-candidate.conf
+  ansible.builtin.template:
+    src: templates/nftables-candidate.conf.j2
+    dest: /etc/nftables-candidate.conf
+  tags: nftables
+
+- name: Run nftables-apply without automatic input
+  ansible.builtin.expect:
+    command: nftables-apply
+    responses:
+      'Can you establish NEW connections to the machine? (y/N)': 'n'
+  async: 300
+  poll: 0
+  register: nftables_apply_job
+
+- name: Wait a few seconds for rules to apply
+  pause:
+    seconds: 5
+
+- name: Test new connection to localhost
+  shell: "nc -zv {{ server_ip }} {{ server_ssh_port }}"
+  register: connectivity_check
+  delegate_to: localhost
+  ignore_errors: yes
+
+
+- name: Provide response to nftables-apply based on connectivity check
+  shell: |
+    if [ "{{ connectivity_check.rc }}" -eq 0 ]; then
+      echo 'y' > /proc/$(pgrep -f nftables-apply)/fd/0
+    else
+      echo 'n' > /proc/$(pgrep -f nftables-apply)/fd/0
+    fi
+  when: nftables_apply_job is defined
+
+- name: success
+  debug:
+    msg: "nftables-apply successfully applied rules and connectivity check passed."
+  when: connectivity_check.rc == 0
+
+- name: fail
+  fail:
+    msg: "nftables-apply failed to apply rules correctly or connectivity check failed."
+  when: connectivity_check.rc !=0

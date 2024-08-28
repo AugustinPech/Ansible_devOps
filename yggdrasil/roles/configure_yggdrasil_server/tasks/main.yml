@@ -1,0 +1,53 @@
+---
+- name: Prepare the backup file
+  file:
+    path: /etc/yggdrasil/yggdrasil.conf.bak
+    state: absent
+
+- name: Backup the yggdrasil.conf file
+  copy:
+    src: /etc/yggdrasil/yggdrasil.conf
+    dest: /etc/yggdrasil/yggdrasil.conf.bak
+    remote_src: yes
+
+- name: Remove existing AllowedPublicKeys block
+  replace:
+    path: /etc/yggdrasil/yggdrasil.conf
+    regexp: 'AllowedPublicKeys: \[[^\]]*\]'
+    replace: 'AllowedPublicKeys: []'
+  register: replace_result
+
+- name: Insert new AllowedPublicKeys block
+  replace:
+    path: /etc/yggdrasil/yggdrasil.conf
+    regexp: 'AllowedPublicKeys: \[\]'
+    replace: |
+      AllowedPublicKeys: [
+      {% for key in yggdrasil_public_keys %}
+          {{ key }}
+      {% endfor %}
+      ]
+  when: replace_result is changed
+
+- name: Remove existing listen block
+  replace:
+    path: /etc/yggdrasil/yggdrasil.conf
+    regexp: 'Listen: \[[^\]]*\]'
+    replace: 'Listen: []'
+  register: replace_result
+
+- name: Insert new Listen block
+  replace:
+    path: /etc/yggdrasil/yggdrasil.conf
+    regexp: 'Listen: \[\]'
+    replace: |
+      Listen: [
+        tls://{{ server_yggdrasil_interface }}:{{ server_yggdrasil_port }}
+      ]
+  when: replace_result is changed
+
+- name: Restart Yggdrasil
+  systemd:
+    name: yggdrasil
+    state: restarted
+    enabled: yes

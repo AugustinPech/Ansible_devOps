@@ -1,0 +1,28 @@
+---
+- name: Install nftables
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+    update_cache: yes
+  tags: nftables
+
+- name: clone nftables-apply
+  ansible.builtin.git:
+    repo: https://github.com/geraldhmt/nftables-apply.git
+    dest: /tmp/nftables-apply
+
+- name: make nftables-apply executable
+  ansible.builtin.shell:
+    cmd: chmod +x /tmp/nftables-apply/nftables-apply
+  tags: nftables
+
+- name: move nftables-apply to /usr/local/bin
+  ansible.builtin.shell:
+    cmd: mv /tmp/nftables-apply/nftables-apply /usr/local/bin
+  tags: nftables
+
+- name: create an alias for nftables-apply
+  ansible.builtin.shell:
+    cmd: echo "alias nftables-apply='/usr/local/bin/nftables-apply'" >> /root/.bashrc
+  tags: nftables
+  

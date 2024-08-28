@@ -1,0 +1,34 @@
+---
+- name: get yggdrasil package
+  get_url:
+    url: "{{ yggdrasil_package_url }}"
+    dest: "/tmp/{{ yggdrasil_package }}"
+  when: yggdrasil_installed.rc != 0
+
+- name: install yggdrasil
+  apt:
+    deb: "/tmp/{{ yggdrasil_package }}"
+  when: yggdrasil_installed.rc != 0
+  become_user: root
+
+- name: start yggdrasil
+  shell: yggdrasil -c /etc/yggdrasil.conf
+  when: yggdrasil_installed.rc != 0
+  become_user: root
+  ignore_errors: yes
+  failed_when: false
+
+- name: Check if yggdrasil is running
+  shell: ps aux | grep yggdrasil
+  register: yggdrasil_running
+  ignore_errors: yes
+  failed_when: false
+
+- name: enable yggdrasil on boot
+  systemd:
+    name: yggdrasil
+    enabled: yes
+    state: started
+  when: yggdrasil_installed.rc != 0
+  ignore_errors: yes
+  failed_when: false

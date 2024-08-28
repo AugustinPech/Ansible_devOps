@@ -1,0 +1,34 @@
+---
+- name: Prepare the backup file
+  file:
+    path: /etc/yggdrasil/yggdrasil.conf.bak
+    state: absent
+
+- name: Backup the yggdrasil.conf file
+  copy:
+    src: /etc/yggdrasil/yggdrasil.conf
+    dest: /etc/yggdrasil/yggdrasil.conf.bak
+    remote_src: yes
+
+- name: Remove existing Peers block
+  replace:
+    path: /etc/yggdrasil/yggdrasil.conf
+    regexp: 'Peers: \[[^\]]*\]'
+    replace: 'Peers: []'
+  register: replace_result
+
+- name: Insert new Peers block
+  replace:
+    path: /etc/yggdrasil/yggdrasil.conf
+    regexp: 'Peers: \[\]'
+    replace: |
+      Peers: [
+        tls://{{ server_ip}}:{{ server_yggdrasil_port }}
+      ]
+  when: replace_result is changed
+
+- name: Restart Yggdrasil
+  systemd:
+    name: yggdrasil
+    state: restarted
+    enabled: yes
