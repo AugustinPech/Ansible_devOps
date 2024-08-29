@@ -1,0 +1,33 @@
+---
+- name: Download Zabbix repository package
+  ansible.builtin.get_url:
+    url: "https://repo.zabbix.com/zabbix/7.0/debian/pool/main/z/zabbix-release/{{ zabbix_package }}"
+    dest: "/tmp/{{ zabbix_package }}"
+    mode: '0664'
+
+- name: Install zabbix-release package
+  ansible.builtin.apt:
+    deb: "/tmp/{{ zabbix_package }}"
+    state: present
+    update_cache: yes
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install Zabbix server, frontend, agent
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - zabbix-agent2
+    - zabbix-agent2-plugin-*
+    - gzip
+  notify: restart zabbix-agent
+
+- name: Install locales package
+  apt:
+    name: locales
+    state: present
