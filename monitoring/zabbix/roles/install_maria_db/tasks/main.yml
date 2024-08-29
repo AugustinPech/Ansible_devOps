@@ -1,0 +1,8 @@
+---
+# tasks file for install_maria_db
+- name: Install MariaDB
+  ansible.builtin.package:
+    name:
+      - mariadb-server
+      - python3-mysqldb
+    state: present

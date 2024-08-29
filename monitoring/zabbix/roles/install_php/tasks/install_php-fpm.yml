@@ -1,0 +1,5 @@
+---
+- name: Install PHP-FPM
+  ansible.builtin.apt:
+    name: "php{{ php_version }}-fpm"
+    state: present

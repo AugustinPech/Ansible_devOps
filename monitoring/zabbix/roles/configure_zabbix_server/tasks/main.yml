@@ -1,0 +1,73 @@
+---
+- name: Ensure MySQL root password is set
+  community.mysql.mysql_user:
+    name: root
+    password: "{{ mysql_root_password }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Create Zabbix database
+  community.mysql.mysql_db:
+    name: "{{ db_name }}"
+    encoding: utf8mb4
+    collation: utf8mb4_bin
+    state: present
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+
+- name: Create Zabbix user
+  community.mysql.mysql_user:
+    name: "{{ db_user }}"
+    host: "localhost"
+    password: "{{ db_password }}"
+    priv: "{{ db_name }}.*:ALL"
+    state: present
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+
+- name: Set global log_bin_trust_function_creators
+  community.mysql.mysql_query:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    query: "SET GLOBAL log_bin_trust_function_creators = 1;"
+  ignore_errors: true
+
+- name: Ensure destination directory for SQL file exists
+  ansible.builtin.file:
+    path: "/tmp/zabbix_sql"
+    state: directory
+    mode: '0755'
+
+- name: Unzip Zabbix SQL script
+  ansible.builtin.shell:
+    cmd: "gunzip -c /usr/share/zabbix-sql-scripts/mysql/server.sql.gz > /tmp/zabbix_sql/server.sql"
+
+- name: Import Zabbix SQL schema into the database
+  ansible.builtin.shell: |
+    mysql --default-character-set=utf8mb4 -u{{ db_user }} -p{{ db_password }} {{ db_name }} < /tmp/zabbix_sql/server.sql
+  args:
+    executable: /bin/bash
+  environment:
+    MYSQL_PWD: "{{ db_password }}"
+  no_log: true
+- name: Set global log_bin_trust_function_creators to 0
+  community.mysql.mysql_query:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    query: "SET GLOBAL log_bin_trust_function_creators = 0;"
+
+- name: Configure DBPassword in Zabbix server configuration
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_server.conf
+    regexp: '^#?DBPassword='
+    line: 'DBPassword={{ db_password }}'
+    state: present
+    backup: yes  # Create a backup before editing
+  become: yes
+  become_user: root
+  notify:
+    - restart zabbix-server
+    - restart zabbix-agent
+    - restart apache2
+#    - enable zabbix-server
+#    - enable zabbix-agent
+#    - started apache2

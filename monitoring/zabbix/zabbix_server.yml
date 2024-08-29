@@ -1,0 +1,57 @@
+- name: install zabbix on server
+  hosts: server
+  become: true
+  become_method: sudo
+  vars_files:
+    - group_vars/secret.yml
+  tasks:
+
+    - name: Check if zabbix is already installed
+      shell: dpkg -l | grep zabbix
+      register: zabbix_installed
+      ignore_errors: yes
+
+    - name: Check if php{{ php_version }} is already installed
+      shell: "dpkg -l | grep php{{ php_version }}"
+      register: php_installed
+      ignore_errors: yes
+    
+    - name: Check if apache2 is already installed
+      shell: dpkg -l | grep apache2
+      register: apache2_installed
+      ignore_errors: yes
+    
+    - name: Check if mariadb is already installed
+      shell: dpkg -l | grep mariadb
+      register: mariadb_installed
+      ignore_errors: yes
+    
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+      when: zabbix_installed.stdout == ""
+    
+    - name: Install php{{ php_version }}-fpm
+      include_role:
+        name: install_php
+      when: zabbix_installed.stdout == "" and php_installed.stdout == ""
+
+    - name: Install Apache
+      include_role:
+        name: install_apache2
+      when: zabbix_installed.stdout == "" and apache2_installed.stdout == ""
+    
+    - name: Install mariadb
+      include_role:
+        name: install_maria_db
+      when: zabbix_installed.stdout == "" and mariadb_installed.stdout == ""
+    
+    - name: Install zabbix
+      include_role:
+        name: install_zabbix_server
+      when: zabbix_installed.stdout == ""
+    
+    - name: Configure zabbix
+      include_role:
+        name: configure_zabbix_server
+      when: reconfigure_zabbix == true and zabbix_installed.stdout != ""

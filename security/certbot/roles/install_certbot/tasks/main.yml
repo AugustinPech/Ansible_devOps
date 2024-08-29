@@ -1,0 +1,9 @@
+---
+- name: Install certbot
+  apt:
+    name: "{{ item }}"
+    state: present
+  become: yes
+  loop:
+    - certbot
+    - python3-certbot-apache

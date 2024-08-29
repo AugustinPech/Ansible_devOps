@@ -1,0 +1,31 @@
+- name: install and configure certbot
+  hosts: server
+  become: true
+  become_method: sudo
+  vars_files:
+    - group_vars/secret.yml
+  tasks:
+
+    - name: Check if certbot is already installed
+      shell: dpkg -l | grep certbot
+      register: certbot_installed
+      ignore_errors: yes
+    
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+      when: certbot_installed.stdout == ""
+    
+    - name: Install certbot
+      include_role:
+        name: install_certbot
+      when: certbot_installed.stdout == ""
+    
+    - name: Configure certbot
+      include_role:
+        name: configure_certbot
+      when: reconfigure_certbot == "yes" # TOFIX
+    
+    - name: Remove not needed packages
+      apt:
+        autoremove: yes

@@ -1,0 +1,27 @@
+- name: install yggdrasil on server
+  hosts: server
+  become: true
+  become_method: sudo
+  vars_files:
+    - group_vars/secret.yml
+  tasks:
+
+    - name: Check if yggdrasil is already installed
+      shell: dpkg -l | grep yggdrasil
+      register: yggdrasil_installed
+      ignore_errors: yes
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+      when: yggdrasil_installed.stdout == ""
+    
+    - name: Install Yggdrasil
+      include_role:
+        name: install_yggdrasil
+      when: yggdrasil_installed.stdout == ""
+    
+    - name: Configure Yggdrasil
+      include_role:
+        name: configure_yggdrasil_server
+      when: reconfigure_yggdrasil == true && yggdrasil_installed.stdout != ""

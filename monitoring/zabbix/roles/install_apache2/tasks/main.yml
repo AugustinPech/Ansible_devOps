@@ -1,0 +1,55 @@
+---
+- name: Install Apache
+  ansible.builtin.apt:
+    name: apache2
+    state: present
+
+- name: Start and enable Apache
+  service:
+    name: apache2
+    state: started
+    enabled: yes
+
+- name: Install required packages
+  ansible.builtin.package:
+    name:
+#      - libapache2-mod-proxy-html
+      - libxml2-dev
+      - python3-certbot-apache
+    state: latest
+    update_cache: yes
+
+- name: Check if php{{ php_version }}-fpm is installed
+  ansible.builtin.package_facts:
+    manager: auto
+  register: installed_packages
+  ignore_errors: yes
+
+- name: Disable mpm_prefork module
+  ansible.builtin.apache2_module:
+    state: absent
+    name:  "{{ item }}"
+  loop:
+    - "php{{ php_version }}"
+#    - mpm_prefork
+  when: "'php{{ php_version }}-fpm' in installed_packages.ansible_facts.packages"
+
+- name: Enable required Apache modules
+  ansible.builtin.apache2_module:
+    state: present
+    name: "{{ item }}"
+  loop:
+    - proxy
+    - proxy_html
+    - proxy_http
+    - ssl
+    - headers
+    - rewrite
+#    - mpm_event
+    - proxy_fcgi
+    - setenvif
+
+- name: Enable php{{ php_version }}-fpm configuration
+  command: /usr/sbin/a2enconf php{{ php_version }}-fpm
+  when: "'php{{ php_version }}-fpm' in installed_packages.ansible_facts.packages"
+  notify: restart apache

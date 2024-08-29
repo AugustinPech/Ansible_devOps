@@ -1,0 +1,4 @@
+---
+- import_tasks: install_dependances.yml
+- import_tasks: install_php-fpm.yml
+- import_tasks: start_enable_php-fpm.yml
