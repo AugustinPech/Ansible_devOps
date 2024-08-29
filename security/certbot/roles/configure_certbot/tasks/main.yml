@@ -2,3 +2,6 @@
 # sudo certbot --apache
 - name: run certbot in not-interactive mod
   shell: "certbot --apache --non-interactive --agree-tos --email {{ certbot_email }} --domains {{ certbot_domains }}"
+
+
+# sudo certbot certonly -d home-monitoring.augustinpech.site --manual --preferred-challenges dns

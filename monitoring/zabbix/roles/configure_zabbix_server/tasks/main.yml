@@ -49,6 +49,7 @@
   environment:
     MYSQL_PWD: "{{ db_password }}"
   no_log: true
+
 - name: Set global log_bin_trust_function_creators to 0
   community.mysql.mysql_query:
     login_user: root
@@ -62,7 +63,17 @@
     line: 'DBPassword={{ db_password }}'
     state: present
     backup: yes  # Create a backup before editing
-  become: yes
+  become: true
+  become_user: root
+
+- name: Configure DBUser in Zabbix server configuration
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_server.conf
+    regexp: '^#?DBUser='
+    line: 'DBUser={{ db_user }}'
+    state: present
+    backup: yes  # Create a backup before editing
+  become: true
   become_user: root
   notify:
     - restart zabbix-server
